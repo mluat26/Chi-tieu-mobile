@@ -1,0 +1,5 @@
+{
+  "name": "Sổ Thu Chi Thông Minh",
+  "description": "Ứng dụng ghi chú chi tiêu mobile-first với tính năng theo dõi ngân sách ăn uống tích lũy và quản lý chi phí chuyến đi. Hỗ trợ nhập liệu cú pháp nhanh.",
+  "requestFramePermissions": []
+}
