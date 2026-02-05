@@ -98,6 +98,10 @@ const App: React.FC = () => {
     setTrips(prev => [trip, ...prev]);
   };
 
+  const handleUpdateTrip = (updatedTrip: Trip) => {
+    setTrips(prev => prev.map(t => t.id === updatedTrip.id ? updatedTrip : t));
+  };
+
   const handleDeleteTrip = (id: string) => {
     if (confirm('Bạn có chắc muốn xóa chuyến đi này? (Các chi tiêu sẽ được giữ lại nhưng không còn liên kết)')) {
         setTrips(prev => prev.filter(t => t.id !== id));
@@ -147,7 +151,8 @@ const App: React.FC = () => {
         return (
           <TripsTab 
             {...commonProps}
-            onAddTrip={handleAddTrip} 
+            onAddTrip={handleAddTrip}
+            onUpdateTrip={handleUpdateTrip}
             onDeleteTrip={handleDeleteTrip}
             onSelectTrip={setActiveTripId}
             activeTripId={activeTripId}

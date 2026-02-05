@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { Trip, Transaction } from '../types';
 import { formatCurrency, formatDate, generateId } from '../utils';
 import TransactionItem from '../components/TransactionItem';
-import { MapPin, Plus, Calendar, ArrowLeft, Trash2, X, Clock, Users, Calculator, Copy, CheckCircle2 } from 'lucide-react';
+import { MapPin, Plus, Calendar, ArrowLeft, Trash2, X, Clock, Users, Calculator, Copy, CheckCircle2, Edit2 } from 'lucide-react';
 
 interface Props {
   trips: Trip[];
   transactions: Transaction[];
   onAddTrip: (trip: Trip) => void;
+  onUpdateTrip: (trip: Trip) => void;
   onDeleteTrip: (id: string) => void;
   onSelectTrip: (id: string | null) => void; 
   activeTripId: string | null;
@@ -19,6 +20,7 @@ const TripsTab: React.FC<Props> = ({
   trips, 
   transactions, 
   onAddTrip, 
+  onUpdateTrip,
   onDeleteTrip, 
   onSelectTrip, 
   activeTripId,
@@ -26,6 +28,7 @@ const TripsTab: React.FC<Props> = ({
   onEditTransaction
 }) => {
   const [showNewTripModal, setShowNewTripModal] = useState(false);
+  const [editingTripId, setEditingTripId] = useState<string | null>(null);
   
   // Settle/Split Bill State
   const [showSettleModal, setShowSettleModal] = useState(false);
@@ -36,23 +39,48 @@ const TripsTab: React.FC<Props> = ({
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState('');
 
-  const handleCreateTrip = (e: React.FormEvent) => {
+  const openCreateModal = () => {
+      setEditingTripId(null);
+      setTripName('');
+      setStartDate(new Date().toISOString().split('T')[0]);
+      setEndDate('');
+      setShowNewTripModal(true);
+  };
+
+  const openEditModal = (trip: Trip) => {
+      setEditingTripId(trip.id);
+      setTripName(trip.name);
+      setStartDate(new Date(trip.startDate).toISOString().split('T')[0]);
+      setEndDate(trip.endDate ? new Date(trip.endDate).toISOString().split('T')[0] : '');
+      setShowNewTripModal(true);
+  };
+
+  const handleSaveTrip = (e: React.FormEvent) => {
     e.preventDefault();
     if (!tripName) return;
     
-    const newTrip: Trip = {
-      id: generateId(),
-      name: tripName,
-      startDate: new Date(startDate).getTime(),
-      endDate: endDate ? new Date(endDate).getTime() : undefined,
-      status: 'ACTIVE'
-    };
-    onAddTrip(newTrip);
+    if (editingTripId) {
+        // Update existing trip
+        const updatedTrip: Trip = {
+            id: editingTripId,
+            name: tripName,
+            startDate: new Date(startDate).getTime(),
+            endDate: endDate ? new Date(endDate).getTime() : undefined,
+            status: 'ACTIVE' // Or keep existing status? For now simple.
+        };
+        onUpdateTrip(updatedTrip);
+    } else {
+        // Create new trip
+        const newTrip: Trip = {
+            id: generateId(),
+            name: tripName,
+            startDate: new Date(startDate).getTime(),
+            endDate: endDate ? new Date(endDate).getTime() : undefined,
+            status: 'ACTIVE'
+        };
+        onAddTrip(newTrip);
+    }
     
-    // Reset form
-    setTripName('');
-    setStartDate(new Date().toISOString().split('T')[0]);
-    setEndDate('');
     setShowNewTripModal(false);
   };
 
@@ -131,6 +159,13 @@ const TripsTab: React.FC<Props> = ({
                 <Clock size={14} /> {trip.status === 'ACTIVE' ? 'Đang đi' : 'Kết thúc'}
                 </span>
                 <div className="flex gap-2">
+                    {/* Edit Trip Button */}
+                    <button 
+                        onClick={() => openEditModal(trip)}
+                        className="text-white/70 hover:text-white bg-white/10 p-2 rounded-full"
+                    >
+                        <Edit2 size={18} />
+                    </button>
                     {/* Calculate Button */}
                     <button 
                         onClick={() => { setMemberCount(1); setShowSettleModal(true); }}
@@ -263,14 +298,14 @@ const TripsTab: React.FC<Props> = ({
        <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-800">Chuyến đi & Gói</h2>
         <button 
-          onClick={() => setShowNewTripModal(true)}
+          onClick={openCreateModal}
           className="flex items-center gap-1 bg-primary text-white px-3 py-1.5 rounded-full text-sm font-medium shadow-sm active:scale-95 transition-transform"
         >
           <Plus size={16} /> Tạo mới
         </button>
       </div>
 
-      {/* Full Modal for Creating Trip */}
+      {/* Full Modal for Creating/Editing Trip */}
       {showNewTripModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
             <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl relative">
@@ -281,9 +316,11 @@ const TripsTab: React.FC<Props> = ({
                     <X size={24} />
                 </button>
                 
-                <h3 className="text-xl font-bold text-gray-900 mb-6">Tạo chuyến đi mới</h3>
+                <h3 className="text-xl font-bold text-gray-900 mb-6">
+                    {editingTripId ? 'Chỉnh sửa chuyến đi' : 'Tạo chuyến đi mới'}
+                </h3>
                 
-                <form onSubmit={handleCreateTrip} className="space-y-4">
+                <form onSubmit={handleSaveTrip} className="space-y-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Tên chuyến đi</label>
                         <input 
@@ -323,7 +360,7 @@ const TripsTab: React.FC<Props> = ({
                         type="submit" 
                         className="w-full bg-primary text-white py-4 rounded-xl font-bold text-lg shadow-lg shadow-primary/30 mt-4 active:scale-95 transition-transform"
                     >
-                        Tạo chuyến đi
+                        {editingTripId ? 'Lưu thay đổi' : 'Tạo chuyến đi'}
                     </button>
                 </form>
             </div>
