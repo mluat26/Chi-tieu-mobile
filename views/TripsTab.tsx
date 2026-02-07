@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trip, Transaction } from '../types';
+import { Trip, Transaction, CategoryType } from '../types';
 import { formatCurrency, formatDate, generateId } from '../utils';
 import TransactionItem from '../components/TransactionItem';
 import { MapPin, Plus, Calendar, ArrowLeft, Trash2, X, Clock, Users, Calculator, Copy, CheckCircle2, Edit2 } from 'lucide-react';
@@ -112,6 +112,16 @@ const TripsTab: React.FC<Props> = ({
     return groups;
   };
 
+  // Helper to calculate Net Cost (Expense - Income)
+  const calculateNetCost = (txs: Transaction[]) => {
+    return txs.reduce((acc, t) => {
+        if (t.category === CategoryType.INCOME) {
+            return acc - t.amount;
+        }
+        return acc + t.amount;
+    }, 0);
+  };
+
   // View: Single Trip Details
   if (activeTripId) {
     const trip = trips.find(t => t.id === activeTripId);
@@ -123,7 +133,7 @@ const TripsTab: React.FC<Props> = ({
         .filter(t => t.tripId === activeTripId)
         .sort((a,b) => b.date - a.date);
 
-    const totalSpent = tripTransactions.reduce((acc, t) => acc + t.amount, 0);
+    const totalSpent = calculateNetCost(tripTransactions);
     const groupedTransactions = groupTransactionsByDate(tripTransactions);
 
     return (
@@ -168,7 +178,7 @@ const TripsTab: React.FC<Props> = ({
                     </button>
                 </div>
             </div>
-            <p className="text-blue-100 text-sm mb-1">Tổng chi phí</p>
+            <p className="text-blue-100 text-sm mb-1">Tổng thực chi (đã trừ thu)</p>
             <h1 className="text-4xl font-bold break-words leading-tight">{formatCurrency(totalSpent)}</h1>
           </div>
           
@@ -205,7 +215,7 @@ const TripsTab: React.FC<Props> = ({
                       </h4>
                       <div className="h-px bg-gray-200 flex-1"></div>
                       <span className="text-xs font-semibold text-blue-500">
-                          {formatCurrency(groupedTransactions[dateKey].reduce((sum, t) => sum + t.amount, 0))}
+                          {formatCurrency(calculateNetCost(groupedTransactions[dateKey]))}
                       </span>
                   </div>
                   <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-4">
@@ -312,7 +322,9 @@ const TripsTab: React.FC<Props> = ({
       <div className="grid gap-4">
         {trips.length > 0 ? (
           trips.map(trip => {
-             const tripTotal = transactions.filter(t => t.tripId === trip.id).reduce((s, t) => s + t.amount, 0);
+             // Calculate Net Cost for list view as well
+             const tripTotal = calculateNetCost(transactions.filter(t => t.tripId === trip.id));
+             
              return (
               <div 
                 key={trip.id} 
