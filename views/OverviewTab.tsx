@@ -3,7 +3,7 @@ import { Transaction, CategoryType, Trip } from '../types';
 import { formatCurrency } from '../utils';
 import TransactionItem from '../components/TransactionItem';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import { Coffee, Fuel, ShoppingCart, Utensils, Plane } from 'lucide-react';
+import { Coffee, Fuel, ShoppingCart, Utensils, Plane, ArrowRight } from 'lucide-react';
 
 interface Props {
   transactions: Transaction[];
@@ -11,9 +11,17 @@ interface Props {
   onDeleteTransaction: (id: string) => void;
   onEditTransaction: (t: Transaction) => void;
   onQuickAdd: (text: string) => void;
+  onViewAll: () => void; // Added Prop
 }
 
-const OverviewTab: React.FC<Props> = ({ transactions, trips, onDeleteTransaction, onEditTransaction, onQuickAdd }) => {
+const OverviewTab: React.FC<Props> = ({ 
+  transactions, 
+  trips, 
+  onDeleteTransaction, 
+  onEditTransaction, 
+  onQuickAdd,
+  onViewAll 
+}) => {
   // Calculate Totals
   const { totalIncome, totalExpense, balance } = useMemo(() => {
     return transactions.reduce(
@@ -146,7 +154,15 @@ const OverviewTab: React.FC<Props> = ({ transactions, trips, onDeleteTransaction
 
       {/* Recent Transactions */}
       <div>
-        <h3 className="font-bold text-gray-800 mb-3 text-lg">Gần đây</h3>
+        <div className="flex justify-between items-center mb-3">
+             <h3 className="font-bold text-gray-800 text-lg">Gần đây</h3>
+             <button 
+                onClick={onViewAll}
+                className="text-primary text-sm font-semibold flex items-center gap-1 hover:underline"
+             >
+                Xem tất cả <ArrowRight size={16} />
+             </button>
+        </div>
         <div className="bg-white rounded-3xl px-2 shadow-sm border border-gray-100">
           {recentTransactions.length > 0 ? (
             recentTransactions.map(t => {

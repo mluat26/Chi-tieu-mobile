@@ -4,6 +4,7 @@ import OverviewTab from './views/OverviewTab';
 import DiningTab from './views/DiningTab';
 import TripsTab from './views/TripsTab';
 import SmartInput from './components/SmartInput';
+import TransactionHistoryModal from './components/TransactionHistoryModal';
 import { AppSettings, Transaction, Trip } from './types';
 import { generateId } from './utils';
 
@@ -29,6 +30,9 @@ const App: React.FC = () => {
   const [isInputOpen, setIsInputOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [initialInputVal, setInitialInputVal] = useState('');
+
+  // History Modal State
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   // Load Data & Check URL Params (Shortcuts)
   useEffect(() => {
@@ -137,6 +141,7 @@ const App: React.FC = () => {
           <OverviewTab 
             {...commonProps}
             onQuickAdd={openSmartInput}
+            onViewAll={() => setIsHistoryOpen(true)}
           />
         );
       case Tab.DINING:
@@ -159,7 +164,13 @@ const App: React.FC = () => {
           />
         );
       default:
-        return <OverviewTab {...commonProps} onQuickAdd={openSmartInput} />;
+        return (
+          <OverviewTab 
+            {...commonProps} 
+            onQuickAdd={openSmartInput}
+            onViewAll={() => setIsHistoryOpen(true)}
+          />
+        );
     }
   };
 
@@ -183,6 +194,21 @@ const App: React.FC = () => {
         initialValue={initialInputVal}
         editingTransaction={editingTransaction}
       />
+
+      {/* Full History Modal - Condition Added */}
+      {isHistoryOpen && (
+        <TransactionHistoryModal
+          isOpen={isHistoryOpen}
+          onClose={() => setIsHistoryOpen(false)}
+          transactions={transactions}
+          trips={trips}
+          onDeleteTransaction={handleDeleteTransaction}
+          onEditTransaction={(t) => {
+              setIsHistoryOpen(false); // Close history to open edit form on main screen
+              openEditTransaction(t);
+          }}
+        />
+      )}
 
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 w-full max-w-md bg-white border-t border-gray-100 flex justify-around items-center py-3 pb-safe z-40">

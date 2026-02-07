@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Plus, X, Calendar, MapPin, User, Save, Tag } from 'lucide-react';
+import { Send, Plus, X, Calendar, MapPin, User, Save, Tag, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
 import { parseTransactionInput, formatDate } from '../utils';
 import { CategoryLabels, CategoryType, Transaction, Trip } from '../types';
 
@@ -15,6 +15,8 @@ interface SmartInputProps {
   editingTransaction: Transaction | null;
 }
 
+type TransactionType = 'EXPENSE' | 'INCOME';
+
 const SmartInput: React.FC<SmartInputProps> = ({ 
   onAdd, 
   onUpdate,
@@ -29,6 +31,7 @@ const SmartInput: React.FC<SmartInputProps> = ({
   const [input, setInput] = useState('');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [scope, setScope] = useState<'PERSONAL' | 'TRIP'>('PERSONAL');
+  const [transType, setTransType] = useState<TransactionType>('EXPENSE'); // NEW: Type toggle
   const [selectedTrip, setSelectedTrip] = useState<string>(''); 
   const [preview, setPreview] = useState<{ amount: number; category: string; note: string; rawCategory: CategoryType } | null>(null);
   const [manualCategory, setManualCategory] = useState<CategoryType | null>(null);
@@ -46,6 +49,8 @@ const SmartInput: React.FC<SmartInputProps> = ({
         const dateStr = new Date(editingTransaction.date).toISOString().split('T')[0];
         setSelectedDate(dateStr);
         setManualCategory(editingTransaction.category);
+        setTransType(editingTransaction.category === CategoryType.INCOME ? 'INCOME' : 'EXPENSE');
+        
         if (editingTransaction.tripId) {
           setScope('TRIP');
           setSelectedTrip(editingTransaction.tripId);
@@ -56,6 +61,7 @@ const SmartInput: React.FC<SmartInputProps> = ({
       } else {
         // Create Mode
         setSelectedDate(new Date().toISOString().split('T')[0]);
+        setTransType('EXPENSE'); // Default to Expense
         if (activeTripId) {
            setScope('TRIP');
            setSelectedTrip(activeTripId);
@@ -99,8 +105,13 @@ const SmartInput: React.FC<SmartInputProps> = ({
     e.preventDefault();
     const parsed = parseTransactionInput(input);
     if (parsed) {
-      const finalCategory = manualCategory || parsed.category;
+      let finalCategory = manualCategory || parsed.category;
       
+      // Force Income Category if Type is Income
+      if (transType === 'INCOME') {
+          finalCategory = CategoryType.INCOME;
+      }
+
       const data = {
         amount: parsed.amount,
         category: finalCategory,
@@ -139,6 +150,12 @@ const SmartInput: React.FC<SmartInputProps> = ({
   // Filter only active trips for selection
   const activeTripsList = availableTrips.filter(t => t.status === 'ACTIVE');
 
+  // Filter Categories based on Type
+  const visibleCategories = Object.entries(CategoryLabels).filter(([key]) => {
+      if (transType === 'INCOME') return key === CategoryType.INCOME;
+      return key !== CategoryType.INCOME;
+  });
+
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-end justify-center sm:items-center p-0 sm:p-4 backdrop-blur-sm transition-all duration-200">
       <div 
@@ -146,53 +163,68 @@ const SmartInput: React.FC<SmartInputProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-bold text-gray-800">
-            {editingTransaction ? 'Sửa chi tiêu' : 'Nhập chi tiêu'}
-          </h3>
+          <div className="flex gap-2 bg-gray-100 p-1 rounded-xl">
+             <button
+                type="button"
+                onClick={() => setTransType('EXPENSE')}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${transType === 'EXPENSE' ? 'bg-white text-red-500 shadow-sm' : 'text-gray-400'}`}
+             >
+                <ArrowUpCircle size={16} /> Chi tiền
+             </button>
+             <button
+                type="button"
+                onClick={() => setTransType('INCOME')}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${transType === 'INCOME' ? 'bg-white text-green-500 shadow-sm' : 'text-gray-400'}`}
+             >
+                <ArrowDownCircle size={16} /> Thu vào
+             </button>
+          </div>
           <button onClick={() => onOpenChange(false)} className="text-gray-400 hover:text-gray-600 p-2 bg-gray-100 rounded-full">
             <X size={20} />
           </button>
         </div>
 
-        {/* Categories Horizontal Scroll */}
-        <div className="mb-4 overflow-x-auto no-scrollbar flex gap-2 pb-1">
-             {Object.entries(CategoryLabels).map(([key, label]) => {
-                 const catKey = key as CategoryType;
-                 const isActive = currentCategoryKey === catKey;
-                 return (
-                     <button
-                        key={key}
-                        type="button"
-                        onClick={() => setManualCategory(catKey)}
-                        className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
-                            isActive 
-                            ? 'bg-gray-800 text-white border-gray-800' 
-                            : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400'
-                        }`}
-                     >
-                        {label}
-                     </button>
-                 )
-             })}
-        </div>
+        {/* Categories Horizontal Scroll - Only show if Expense */}
+        {transType === 'EXPENSE' && (
+            <div className="mb-4 overflow-x-auto no-scrollbar flex gap-2 pb-1">
+                {visibleCategories.map(([key, label]) => {
+                    const catKey = key as CategoryType;
+                    const isActive = currentCategoryKey === catKey;
+                    return (
+                        <button
+                            key={key}
+                            type="button"
+                            onClick={() => setManualCategory(catKey)}
+                            className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
+                                isActive 
+                                ? 'bg-gray-800 text-white border-gray-800' 
+                                : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400'
+                            }`}
+                        >
+                            {label}
+                        </button>
+                    )
+                })}
+            </div>
+        )}
 
         <div className="mb-4 p-4 bg-gray-50 rounded-2xl border border-gray-100 min-h-[80px] flex items-center">
           {preview ? (
             <div className="w-full">
               <div className="flex justify-between items-center mb-1">
-                <span className="text-2xl font-bold text-red-500">
-                   {new Intl.NumberFormat('vi-VN').format(preview.amount)} đ
+                <span className={`text-2xl font-bold ${transType === 'INCOME' ? 'text-green-500' : 'text-red-500'}`}>
+                   {transType === 'INCOME' ? '+' : '-'}{new Intl.NumberFormat('vi-VN').format(preview.amount)} đ
                 </span>
                 <span className="text-xs font-bold bg-gray-900 text-white px-3 py-1 rounded-full flex items-center gap-1">
                   <Tag size={10} />
-                  {CategoryLabels[manualCategory || preview.rawCategory]}
+                  {transType === 'INCOME' ? 'Thu nhập' : CategoryLabels[manualCategory || preview.rawCategory]}
                 </span>
               </div>
               <p className="text-gray-600 font-medium">"{preview.note}"</p>
             </div>
           ) : (
             <p className="text-gray-400 text-sm">
-              Cú pháp: <span className="font-mono text-gray-500">"50k ăn sáng"</span>
+              Cú pháp: <span className="font-mono text-gray-500">"50k {transType === 'EXPENSE' ? 'ăn sáng' : 'lương'}"</span>
             </p>
           )}
         </div>
